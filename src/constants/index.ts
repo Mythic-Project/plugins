@@ -1,0 +1,63 @@
+
+const VSR_PLUGINS = [
+  "4Q6WW2ouZ6V3iaNm56MTd5n2tnTm4C5fiH8miFHnAFHo",
+  "5sWzuuYkeWLBdAv3ULrBfqA51zF7Y4rnVzereboNDCPn",
+  "VotEn9AWwTFtJPJSMV5F9jsMY6QwWM5qn3XP9PATGW7",
+  "VoteMBhDCqGLRgYpp9o7DGyq81KNmwjXQRAHStjtJsS",
+  "vsr2nfGVNHmSY8uxoBGqq8AQbwz3JwaEaHqGbsTPXqQ",
+  "4PLZ9B4ywsjDKagJhnEsPiCdt9t1bqM5sphJjWzYenVV",
+  "EydekgbR4LHaNxDgiS8WfPdFboesLD9LAnu2LBqAvqfr",
+]
+
+const QUADRATIC_PLUGINS = [
+  "quadCSapU8nTdLg73KHDnmdxKnJQsh7GUbu5tZfnRRr",
+]
+
+const PYTH_PLUGINS = [
+  "pytS9TjG1qyAZypk7n8rw8gfW9sUaqqYyMhJQ4E7JCQ",
+]
+
+const JP_LOCK_PLUGINS = [
+  "JPLockxtkngHkaQT5AuRYow3HyUv5qWzmhwsCPd653n",
+]
+
+const NFT_VOTER_PLUGINS = [
+  "GnftV5kLjd67tvHpNGyodwWveEKivz3ZWvvE3Z4xi2iw",
+]
+
+export const TOKEN_VOTER_PLUGINS = [
+  "HA99cuBQCCzZu1zuHN2qBxo2FBo1cxNLwKkdt6Prhy8v",
+]
+
+const GATEWAY_PLUGINS = [
+  "GgathUhdrCWRHowoRKACjgWhYHfxCEdBi5ViqYN6HVxk",
+]
+
+const TOKEN_HAVER_PLUGINS = [
+  "7gobfUihgoxA14RUnVaseoah89ggCgYAzgz1JoaPAXam",
+]
+
+const BIO_VSR_PLUGINS = [
+  "9SJqwCQ5AJkFtC7zxfFsF6Y5dm22XzN3JEhn3N14v23t",
+]
+
+const DRIFT_PLUGINS = [
+  "dVoTE1AJqkZVoE1mPbWcqYPmEEvAUBksHY2NiM2UJQe",
+]
+
+const BONK_PLUGINS = [
+  "EoKpGErCsD4UEbbY6LX4MLWBUjmoAxqKdU4fdtLuzK6M",
+]
+
+export const PLUGIN_KEYS = [
+  VSR_PLUGINS,
+  BIO_VSR_PLUGINS,
+  TOKEN_VOTER_PLUGINS,
+  BONK_PLUGINS,
+  QUADRATIC_PLUGINS,
+  NFT_VOTER_PLUGINS,
+  GATEWAY_PLUGINS,
+  TOKEN_HAVER_PLUGINS,
+  DRIFT_PLUGINS,
+  PYTH_PLUGINS,
+]

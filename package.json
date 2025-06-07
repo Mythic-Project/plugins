@@ -1,0 +1,22 @@
+{
+  "name": "plugins",
+  "version": "1.0.0",
+  "main": "dist/index.js",
+  "exports": {
+    ".": "./dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "@coral-xyz/anchor": "^0.31.1",
+    "@coral-xyz/anchor-old": "npm:@coral-xyz/anchor@0.29.0",
+    "@pythnetwork/staking-sdk": "^0.0.4",
+    "@solana/web3.js": "^1.98.2",
+    "bn.js": "^5.2.2"
+  }
+}
