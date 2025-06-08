@@ -282,6 +282,59 @@ export type DriftStakeVoter = {
         ]
       }
     },
+    {
+      "name": "insuranceFundStake",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "authority",
+            "type": "publicKey"
+          },
+          {
+            "name": "ifShares",
+            "type": "u128"
+          },
+          {
+            "name": "lastWithdrawRequestShares",
+            "type": "u128"
+          },
+          {
+            "name": "ifBase",
+            "type": "u128"
+          },
+          {
+            "name": "lastValidTs",
+            "type": "i64"
+          },
+          {
+            "name": "lastWithdrawRequestValue",
+            "type": "u64"
+          },
+          {
+            "name": "lastWithdrawRequestTs",
+            "type": "i64"
+          },
+          {
+            "name": "costBasis",
+            "type": "i64"
+          },
+          {
+            "name": "marketIndex",
+            "type": "u16"
+          },
+          {
+            "name": "padding",
+            "type": {
+              "array": [
+                "u8",
+                14
+              ]
+            }
+          }
+        ]
+      }
+    },
   ]
   types: [
     {
@@ -654,6 +707,59 @@ export const driftIdl: DriftStakeVoter = {
           },
         ],
       },
+    },
+    {
+      "name": "insuranceFundStake",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "authority",
+            "type": "publicKey"
+          },
+          {
+            "name": "ifShares",
+            "type": "u128"
+          },
+          {
+            "name": "lastWithdrawRequestShares",
+            "type": "u128"
+          },
+          {
+            "name": "ifBase",
+            "type": "u128"
+          },
+          {
+            "name": "lastValidTs",
+            "type": "i64"
+          },
+          {
+            "name": "lastWithdrawRequestValue",
+            "type": "u64"
+          },
+          {
+            "name": "lastWithdrawRequestTs",
+            "type": "i64"
+          },
+          {
+            "name": "costBasis",
+            "type": "i64"
+          },
+          {
+            "name": "marketIndex",
+            "type": "u16"
+          },
+          {
+            "name": "padding",
+            "type": {
+              "array": [
+                "u8",
+                14
+              ]
+            }
+          }
+        ]
+      }
     },
   ],
   types: [
