@@ -19,6 +19,7 @@
     "@pythnetwork/staking-sdk": "^0.0.4",
     "@solana/web3.js": "^1.98.2",
     "axios": "^1.9.0",
+    "bignumber.js": "^9.3.0",
     "bn.js": "^5.2.2",
     "governance-idl-sdk": "^0.0.4"
   }

@@ -6,23 +6,10 @@ import { Connection, PublicKey } from "@solana/web3.js";
 import { getInsuranceFundStakeAccountPublicKey, getInsuranceFundVaultPublicKey, getSpotMarketPublicKey } from "./utils";
 import { DriftClient } from "@drift-labs/sdk";
 import { SplGovernance } from "governance-idl-sdk";
+import { getRegistrarKey } from "../../utils";
 
 export const DriftPlugin: VotePlugin = {
   name: "Drift Plugin",
-  
-  getRegistrarKey(programId: string, realm: string, mint: string) {
-    return PublicKey.findProgramAddressSync(
-      [Buffer.from("registrar"), new PublicKey(realm).toBuffer(), new PublicKey(mint).toBuffer()],
-      new PublicKey(programId)
-    )[0];
-  },
-
-  getVoterKey(programId: string, registrar: string, voter: string) {
-    return PublicKey.findProgramAddressSync(
-      [new PublicKey(registrar).toBuffer(), Buffer.from("voter"), new PublicKey(voter).toBuffer()],
-      new PublicKey(programId)
-    )[0];
-  },
 
   getClient(rpcEndpoint: string, programId?: string): Program<DriftStakeVoter> {
     const provider = new AnchorProvider(
@@ -43,7 +30,7 @@ export const DriftPlugin: VotePlugin = {
     mint: string
   ): Promise<BN> {
     const client: Program<DriftStakeVoter>  = this.getClient(rpcEndpoint, programId)
-    const registrarKey = this.getRegistrarKey(programId, realm, mint)
+    const registrarKey = getRegistrarKey(programId, realm, mint)
     const registrarData = await client.account.registrar.fetch(registrarKey)
 
     const realmData = await client.provider.connection.getAccountInfo(new PublicKey(realm))

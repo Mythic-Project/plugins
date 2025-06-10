@@ -8,23 +8,10 @@ import { Connection, PublicKey } from "@solana/web3.js";
 import { SplTokenStaking } from "./stake";
 import { TokenVoterPlugin } from "../token-voter/client";
 import { TOKEN_VOTER_PLUGINS } from "../../constants";
+import { getRegistrarKey } from "../../utils";
 
 export const BonkVoterPlugin: VotePlugin = {
   name: "Bonk Plugin",
-
-  getRegistrarKey(programId: string, realm: string, mint: string) {
-    return PublicKey.findProgramAddressSync(
-      [Buffer.from("registrar"), new PublicKey(realm).toBuffer(), new PublicKey(mint).toBuffer()],
-      new PublicKey(programId)
-    )[0];
-  },
-
-  getVoterKey(programId: string, registrar: string, voter: string) {
-    return PublicKey.findProgramAddressSync(
-      [new PublicKey(registrar).toBuffer(), Buffer.from("voter"), new PublicKey(voter).toBuffer()],
-      new PublicKey(programId)
-    )[0];
-  },
 
   getClient(rpcEndpoint: string, programId?: string): Program<BonkPlugin> {
     const provider = new AnchorProvider(
@@ -50,7 +37,7 @@ export const BonkVoterPlugin: VotePlugin = {
       client.provider
     )
   
-    const registrarKey = this.getRegistrarKey(programId, realm, mint);
+    const registrarKey = getRegistrarKey(programId, realm, mint);
     const registrar = await client.account.registrar.fetch(registrarKey);
     const stakePool = registrar.stakePool;
 

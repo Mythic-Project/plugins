@@ -7,7 +7,9 @@ export async function getVoterWeight(
   programId: string,
   voter: string,
   realm: string,
-  mint: string
+  mint: string,
+  inputWeightProgramId?: string,
+  inputInputWeightProgramId?: string
 ): Promise<BN> {
   const pluginIndex = PLUGIN_KEYS.findIndex((plugin) => plugin.includes(programId))
   
@@ -16,13 +18,15 @@ export async function getVoterWeight(
   }
   
   const plugin = plugins[pluginIndex]
-
+    
   const weight = plugin.getVoterWeightByVoter(
     rpcEndpoint,
     programId,
     voter,
     realm,
-    mint
+    mint,
+    inputWeightProgramId,
+    inputInputWeightProgramId
   )
   
   return weight

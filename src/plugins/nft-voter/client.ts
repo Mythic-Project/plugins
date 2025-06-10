@@ -5,23 +5,10 @@ import { NftVoter } from "./idl";
 import idl from "./idl.json";
 import { Connection, PublicKey } from "@solana/web3.js";
 import fs from "fs";
+import { getRegistrarKey } from "../../utils";
 
 export const NftVoterPlugin: VotePlugin = {
   name: "NFT Voter Plugin",
-
-  getRegistrarKey(programId: string, realm: string, mint: string) {
-    return PublicKey.findProgramAddressSync(
-      [Buffer.from("registrar"), new PublicKey(realm).toBuffer(), new PublicKey(mint).toBuffer()],
-      new PublicKey(programId)
-    )[0];
-  },
-
-  getVoterKey(programId: string, registrar: string, voter: string) {
-    return PublicKey.findProgramAddressSync(
-      [new PublicKey(registrar).toBuffer(), Buffer.from("voter"), new PublicKey(voter).toBuffer()],
-      new PublicKey(programId)
-    )[0];
-  },
 
   getClient(rpcEndpoint: string, programId?: string): Program<NftVoter> {
     const provider = new AnchorProvider(
@@ -43,7 +30,7 @@ export const NftVoterPlugin: VotePlugin = {
   ): Promise<BN> {
     const client: Program<NftVoter> = this.getClient(rpcEndpoint, programId)
 
-    const registrarKey = this.getRegistrarKey(programId, realm, mint);
+    const registrarKey = getRegistrarKey(programId, realm, mint);
     const registrar = await client.account.registrar.fetch(registrarKey);
     const collectionConfigs = registrar.collectionConfigs;
     const collections = collectionConfigs.map((config) => config.collection.toBase58());

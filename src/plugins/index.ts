@@ -2,7 +2,11 @@ import { VotePlugin } from "../constants/types";
 import { BioVsrPlugin } from "./bio-vsr/client";
 import { BonkVoterPlugin } from "./bonk/client";
 import { DriftPlugin } from "./drift/client";
+import { GatewayPlugin } from "./gateway/client";
 import { NftVoterPlugin } from "./nft-voter/client";
+import { PythPlugin } from "./pyth/client";
+import { QuadraticPlugin } from "./quadratic/client";
+import { TokenHaverPlugin } from "./token-haver/client";
 import { TokenVoterPlugin } from "./token-voter/client";
 import { VsrPlugin } from "./vsr/client";
 
@@ -12,5 +16,9 @@ export const plugins: VotePlugin[] = [
   TokenVoterPlugin,
   BonkVoterPlugin,
   NftVoterPlugin,
-  DriftPlugin
+  DriftPlugin,
+  PythPlugin,
+  QuadraticPlugin,
+  GatewayPlugin,
+  TokenHaverPlugin
 ]

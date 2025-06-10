@@ -5,18 +5,6 @@ import BN from "bn.js"
 export type VotePlugin = {
   name: string,
   
-  getRegistrarKey(
-    programId: string,
-    realm: string,
-    mint: string
-  ): PublicKey,
-
-  getVoterKey(
-    programId: string,
-    registrar: string,
-    voter: string,
-  ): PublicKey,
-
   getClient(
     rpcEndpoint: string,
     programId?: string,
@@ -28,5 +16,7 @@ export type VotePlugin = {
     voter: string,
     realm: string,
     mint: string,
+    inputWeightProgramId?: string,
+    inputInputWeightProgramId?: string
   ): Promise<BN>
 }
