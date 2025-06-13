@@ -1,6 +1,6 @@
 {
     "name": "@realms-today/plugins",
-    "version": "0.1.1",
+    "version": "0.1.3",
     "main": "dist/index.js",
     "types": "dist/index.d.ts",
     "publishConfig": {
@@ -33,5 +33,8 @@
     },
     "resolutions": {
         "rpc-websockets": "7.10.0"
+    },
+    "devDependencies": {
+        "typescript": "^5.8.3"
     }
 }
