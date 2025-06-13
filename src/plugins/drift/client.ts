@@ -4,7 +4,6 @@ import BN from "bn.js";
 import { driftIdl, DriftStakeVoter } from "./idl";
 import { Connection, PublicKey } from "@solana/web3.js";
 import { getInsuranceFundStakeAccountPublicKey, getInsuranceFundVaultPublicKey, getSpotMarketPublicKey } from "./utils";
-import { DriftClient } from "@drift-labs/sdk";
 import { SplGovernance } from "governance-idl-sdk";
 import { getRegistrarKey } from "../../utils";
 
@@ -31,20 +30,20 @@ export const DriftPlugin: VotePlugin = {
   ): Promise<BN> {
     const client: Program<DriftStakeVoter>  = this.getClient(rpcEndpoint, programId)
     const registrarKey = getRegistrarKey(programId, realm, mint)
-    const registrarData = await client.account.registrar.fetch(registrarKey)
-
-    const realmData = await client.provider.connection.getAccountInfo(new PublicKey(realm))
-
-    const splGovernance = new SplGovernance(client.provider.connection, realmData?.owner || undefined)
-
-    const spotMarketIndex = registrarData.spotMarketIndex
-    const insuranceFundStakeKey = getInsuranceFundStakeAccountPublicKey(
-      registrarData.driftProgramId,
-      new PublicKey(voter),
-      spotMarketIndex
-    )
 
     try {
+      const registrarData = await client.account.registrar.fetch(registrarKey)
+      const realmData = await client.provider.connection.getAccountInfo(new PublicKey(realm))
+
+      const splGovernance = new SplGovernance(client.provider.connection, realmData?.owner || undefined)
+
+      const spotMarketIndex = registrarData.spotMarketIndex
+      const insuranceFundStakeKey = getInsuranceFundStakeAccountPublicKey(
+        registrarData.driftProgramId,
+        new PublicKey(voter),
+        spotMarketIndex
+      )
+      
       const insuranceFundStake = await client.account.insuranceFundStake.fetch(insuranceFundStakeKey)
       const ifShares =
         insuranceFundStake.lastValidTs.toNumber() > Date.now() / 1000 + 5 ?

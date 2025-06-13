@@ -4,6 +4,7 @@ import { BonkVoterPlugin } from "./bonk/client";
 import { DriftPlugin } from "./drift/client";
 import { GatewayPlugin } from "./gateway/client";
 import { NftVoterPlugin } from "./nft-voter/client";
+import { ParclPlugin } from "./parcl/client";
 import { PythPlugin } from "./pyth/client";
 import { QuadraticPlugin } from "./quadratic/client";
 import { TokenHaverPlugin } from "./token-haver/client";
@@ -20,5 +21,6 @@ export const plugins: VotePlugin[] = [
   PythPlugin,
   QuadraticPlugin,
   GatewayPlugin,
-  TokenHaverPlugin
+  TokenHaverPlugin,
+  ParclPlugin
 ]
