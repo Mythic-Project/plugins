@@ -40,7 +40,13 @@ export const BonkVoterPlugin: VotePlugin = {
     try {
   
       const registrarKey = getRegistrarKey(programId, realm, mint);
-      const registrar = await client.account.registrar.fetch(registrarKey);
+      const registrar = await client.account.registrar.fetchNullable(registrarKey);
+      
+      if (!registrar) {
+        console.warn("Registrar not found");
+        return new BN(0);
+      }
+      
       const stakePool = registrar.stakePool;
 
       const sdrs = await stakingClient.account.stakeDepositReceipt.all([

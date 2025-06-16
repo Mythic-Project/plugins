@@ -33,9 +33,14 @@ export const VsrPlugin: VotePlugin = {
     const voterKey = getVoterKey(programId, registrarKey.toBase58(), voter)
 
     try {
-      const voterData = await client.account.voter.fetch(voterKey)
-      const registrarData = await client.account.registrar.fetch(registrarKey)
+      const voterData = await client.account.voter.fetchNullable(voterKey)
+      const registrarData = await client.account.registrar.fetchNullable(registrarKey)
 
+      if (!voterData || !registrarData) {
+        console.warn("Voter or registrar data not found");
+        return new BN(0);
+      }
+      
       return computeVsrWeight(
         voterData.deposits,
         registrarData.votingMints)

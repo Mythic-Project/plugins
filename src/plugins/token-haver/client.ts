@@ -30,7 +30,13 @@ export const TokenHaverPlugin: VotePlugin = {
   ): Promise<BN> {
     const client: Program<TokenHaver> = this.getClient(rpcEndpoint, programId)
     const registrarKey = getRegistrarKey(programId, realm, mint)
-    const registrarData = await client.account.registrar.fetch(registrarKey)
+    const registrarData = await client.account.registrar.fetchNullable(registrarKey)
+
+    if (!registrarData) {
+      console.warn("Registrar not found");
+      return new BN(0);
+    }
+    
     const mints = registrarData.mints
     
     const atas = mints.map(mint => associatedAddress({mint, owner: new PublicKey(voter)}))

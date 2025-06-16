@@ -32,10 +32,15 @@ export const DriftPlugin: VotePlugin = {
     const registrarKey = getRegistrarKey(programId, realm, mint)
 
     try {
-      const registrarData = await client.account.registrar.fetch(registrarKey)
+      const registrarData = await client.account.registrar.fetchNullable(registrarKey)
       const realmData = await client.provider.connection.getAccountInfo(new PublicKey(realm))
 
       const splGovernance = new SplGovernance(client.provider.connection, realmData?.owner || undefined)
+
+      if (!registrarData) {
+        console.warn("Registrar data not found");
+        return new BN(0);
+      }
 
       const spotMarketIndex = registrarData.spotMarketIndex
       const insuranceFundStakeKey = getInsuranceFundStakeAccountPublicKey(
@@ -44,7 +49,13 @@ export const DriftPlugin: VotePlugin = {
         spotMarketIndex
       )
       
-      const insuranceFundStake = await client.account.insuranceFundStake.fetch(insuranceFundStakeKey)
+      const insuranceFundStake = await client.account.insuranceFundStake.fetchNullable(insuranceFundStakeKey)
+      
+      if (!insuranceFundStake) {
+        console.warn("Insurance fund stake data not found");
+        return new BN(0);
+      }
+      
       const ifShares =
         insuranceFundStake.lastValidTs.toNumber() > Date.now() / 1000 + 5 ?
           new BN(0) :

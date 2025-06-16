@@ -37,7 +37,13 @@ export const QuadraticPlugin: VotePlugin = {
 
     const registrarKey = getRegistrarKey(programId, realm, mint);
     const client: Program<Quadratic> = this.getClient(rpcEndpoint, programId)
-    const registrar = await client.account.registrar.fetch(registrarKey);
+    const registrar = await client.account.registrar.fetchNullable(registrarKey);
+
+    if (!registrar) {
+      console.warn("Registrar not found");
+      return new BN(0);
+    }
+    
     const a = registrar.quadraticCoefficients.a;
     const b = registrar.quadraticCoefficients.b;
     const c = registrar.quadraticCoefficients.c;

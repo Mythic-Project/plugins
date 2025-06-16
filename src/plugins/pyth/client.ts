@@ -23,10 +23,16 @@ export const PythPlugin: VotePlugin = {
     mint: string
   ): Promise<BN> {
     const client: PythStakingClient = this.getClient(rpcEndpoint, programId);
-    const config = await client.getVoterWeight(new PublicKey(voter))
-    const pythScalingFactor = await client.getScalingFactor()
-    const scalingFactor = new BigNumber(pythScalingFactor)
-    const power = new BigNumber(config.toString()).multipliedBy(scalingFactor)
+
+    try {
+      const config = await client.getVoterWeight(new PublicKey(voter))
+      const pythScalingFactor = await client.getScalingFactor()
+      const scalingFactor = new BigNumber(pythScalingFactor)
+      const power = new BigNumber(config.toString()).multipliedBy(scalingFactor)
     return new BN(power.integerValue().toString());
+    } catch (error) {
+      console.error("Error fetching voter weight:", error);
+      return new BN(0);
+    }
   }
 }

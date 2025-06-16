@@ -31,7 +31,13 @@ export const NftVoterPlugin: VotePlugin = {
     const client: Program<NftVoter> = this.getClient(rpcEndpoint, programId)
 
     const registrarKey = getRegistrarKey(programId, realm, mint);
-    const registrar = await client.account.registrar.fetch(registrarKey);
+    const registrar = await client.account.registrar.fetchNullable(registrarKey);
+
+    if (!registrar) {
+      console.warn("Registrar not found");
+      return new BN(0);
+    }
+    
     const collectionConfigs = registrar.collectionConfigs;
     const collections = collectionConfigs.map((config) => config.collection.toBase58());
 
