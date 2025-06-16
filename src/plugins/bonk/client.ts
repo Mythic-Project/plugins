@@ -36,48 +36,53 @@ export const BonkVoterPlugin: VotePlugin = {
       stakeIdl as SplTokenStaking,
       client.provider
     )
+
+    try {
   
-    const registrarKey = getRegistrarKey(programId, realm, mint);
-    const registrar = await client.account.registrar.fetch(registrarKey);
-    const stakePool = registrar.stakePool;
+      const registrarKey = getRegistrarKey(programId, realm, mint);
+      const registrar = await client.account.registrar.fetch(registrarKey);
+      const stakePool = registrar.stakePool;
 
-    const sdrs = await stakingClient.account.stakeDepositReceipt.all([
-      {
-        memcmp: {
-          offset: 8,
-          bytes: voter,
+      const sdrs = await stakingClient.account.stakeDepositReceipt.all([
+        {
+          memcmp: {
+            offset: 8,
+            bytes: voter,
+          },
         },
-      },
-      {
-        memcmp: {
-          offset: 72,
-          bytes: stakePool.toBase58(),
+        {
+          memcmp: {
+            offset: 72,
+            bytes: stakePool.toBase58(),
+          },
         },
-      },
-    ])
+      ])
 
-    const activeSdrs = sdrs.filter(
-      (sdr) =>
-        sdr.account.depositTimestamp
-          .add(sdr.account.lockupDuration)
-          .toNumber() >
-        Date.now() / 1000,
-    )
+      const activeSdrs = sdrs.filter(
+        (sdr) =>
+          sdr.account.depositTimestamp
+            .add(sdr.account.lockupDuration)
+            .toNumber() >
+          Date.now() / 1000,
+      )
 
-    const sdrBalance = activeSdrs.reduce(
-      (a, b) => a.add(b.account.depositAmount),
-      new BN(0),
-    )
+      const sdrBalance = activeSdrs.reduce(
+        (a, b) => a.add(b.account.depositAmount),
+        new BN(0),
+      )
 
-    const depositedTokens = await TokenVoterPlugin.getVoterWeightByVoter(
-      rpcEndpoint,
-      TOKEN_VOTER_PLUGINS[0],
-      voter,
-      realm,
-      mint
-    )
+      const depositedTokens = await TokenVoterPlugin.getVoterWeightByVoter(
+        rpcEndpoint,
+        TOKEN_VOTER_PLUGINS[0],
+        voter,
+        realm,
+        mint
+      )
 
-    return depositedTokens.add(sdrBalance)
-
+      return depositedTokens.add(sdrBalance)
+    } catch (error) {
+      console.error("Error fetching voter weight data", error);
+      return new BN(0);
+    }
   }
 }

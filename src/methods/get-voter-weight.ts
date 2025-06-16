@@ -19,7 +19,7 @@ export async function getVoterWeight(
   
   const plugin = plugins[pluginIndex]
     
-  const weight = plugin.getVoterWeightByVoter(
+  const weight = await plugin.getVoterWeightByVoter(
     rpcEndpoint,
     programId,
     voter,
