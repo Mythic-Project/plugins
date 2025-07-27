@@ -5,6 +5,8 @@ import { IdlTypes } from "@coral-xyz/anchor";
 export const SCALED_FACTOR_BASE = new BN(1_000_000_000)
 
 export type DepositEntry = IdlTypes<BioVoterStakeRegistry>["depositEntry"]
+export type VoterData = IdlTypes<BioVoterStakeRegistry>["voter"]
+export type RegistrarData = IdlTypes<BioVoterStakeRegistry>["registrar"]
 
 export function computeVsrWeight(
   deposits: IdlTypes<BioVoterStakeRegistry>["depositEntry"][],

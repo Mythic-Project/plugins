@@ -1,10 +1,12 @@
 import BN from "bn.js";
 import { VoterStakeRegistry } from "./idl";
-import { IdlTypes } from "@coral-xyz/anchor-old";
+import { IdlAccounts, IdlTypes } from "@coral-xyz/anchor-old";
 
 export const SCALED_FACTOR_BASE = new BN(1_000_000_000)
 
 export type DepositEntry = IdlTypes<VoterStakeRegistry>["DepositEntry"]
+export type VoterData = IdlAccounts<VoterStakeRegistry>["voter"]
+export type RegistrarData = IdlAccounts<VoterStakeRegistry>["registrar"]
 
 export function computeVsrWeight(
   deposits: IdlTypes<VoterStakeRegistry>["DepositEntry"][],

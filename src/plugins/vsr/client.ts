@@ -1,53 +1,328 @@
-import { AnchorProvider, Program, Wallet } from "@coral-xyz/anchor-old";
 import { VotePlugin } from "../../constants/types";
 import BN from "bn.js";
-import { VoterStakeRegistry } from "./idl";
 import idl from "./idl.json";
-import { Connection, PublicKey } from "@solana/web3.js";
+import { VoterStakeRegistry } from "./idl";
+import { Connection, PublicKey, TransactionInstruction } from "@solana/web3.js";
 import { computeVsrWeight } from "./utils";
-import { getRegistrarKey, getVoterKey } from "../../utils";
+import { getOldAnchorProgram, getRegistrarKey, getVoterKey, getVoterWeightRecordKey } from "../../utils";
+import { RegistrarData, VoterData } from "./utils";
+import { ASSOCIATED_TOKEN_PROGRAM_ID, getAssociatedTokenAddressSync } from "@solana/spl-token";
+import { SYSTEM_PROGRAM_ID } from "@realms-today/spl-governance";
+import { Program } from "@coral-xyz/anchor-old";
 
-export const VsrPlugin: VotePlugin = {
-  name: "Voter Stake Registry",
+export class VsrPlugin implements VotePlugin {
+  private registrarData: RegistrarData | null = null;
+  private voterData: VoterData | null = null;
+  private registrarKey: PublicKey | null = null;
+  private voterKey: PublicKey | null = null;
+  private voterWeightRecordKey: PublicKey | null = null;
+  private voterBump = 255;
+  private vwrBump = 255;
+  private voter: string | null = null;
+  connection: Connection;
+  client: Program<VoterStakeRegistry>;
+  showDepositModal: boolean;
 
-  getClient(rpcEndpoint: string, programId?: string): Program<VoterStakeRegistry> {
-    const provider = new AnchorProvider(
-      new Connection(rpcEndpoint, "confirmed"),
-      {} as Wallet,
-      { commitment: "confirmed" }
-    );
+  constructor(rpcEndpoint: string, programId: string) {
+    const { client, connection } = getOldAnchorProgram(rpcEndpoint, idl as VoterStakeRegistry, programId)
+    this.client = client;
+    this.connection = connection;
+    this.showDepositModal = true;
+  }
 
-    const program = new Program<VoterStakeRegistry>(idl as VoterStakeRegistry, programId!, provider)
-    return program;
-  },
 
-  async getVoterWeightByVoter(
-    rpcEndpoint: string, 
-    programId: string, 
+  async initPlugin(
+    rpcEndpoint: string,
+    programId: string,
     voter: string,
     realm: string,
     mint: string
-  ): Promise<BN> {
-    const client: Program<VoterStakeRegistry>  = this.getClient(rpcEndpoint, programId)
+  ): Promise<VotePlugin> {
+    return await VsrPlugin.init(
+      rpcEndpoint,
+      programId,
+      voter,
+      realm,
+      mint
+    );
+  }
+
+  static async init(
+    rpcEndpoint: string,
+    programId: string,
+    voter: string,
+    realm: string,
+    mint: string
+  ) {
     const registrarKey = getRegistrarKey(programId, realm, mint, true)
-    const voterKey = getVoterKey(programId, registrarKey.toBase58(), voter)
+    const [voterKey, voterBump] = getVoterKey(programId, registrarKey.toBase58(), voter);
+    const [voterWeightRecordKey, vwrBump] = getVoterWeightRecordKey(programId, registrarKey.toBase58(), voter);
 
-    try {
-      const voterData = await client.account.voter.fetchNullable(voterKey)
-      const registrarData = await client.account.registrar.fetchNullable(registrarKey)
+    const instance = new VsrPlugin(rpcEndpoint, programId);
 
-      if (!voterData || !registrarData) {
-        console.warn("Voter or registrar data not found");
-        return new BN(0);
-      }
-      
-      return computeVsrWeight(
-        voterData.deposits,
-        registrarData.votingMints)
-      }
-    catch(error) {
-      console.error("Error fetching voter weight data", error);
-      return new BN(0);
+    const registrarData = await instance.client.account.registrar.fetchNullable(registrarKey)
+    const voterData = await instance.client.account.voter.fetchNullable(voterKey);
+
+    instance.registrarData = registrarData
+    instance.voterData = voterData;
+    instance.registrarKey = registrarKey;
+    instance.voterKey = voterKey;
+    instance.voterWeightRecordKey = voterWeightRecordKey;
+    instance.voterBump = voterBump;
+    instance.vwrBump = vwrBump;
+    instance.voter = voter;
+
+    return instance;
+  }
+
+  async getVoterWeight() {
+    const voterData = this.voterData;
+    const registrarData = this.registrarData;
+
+    if (!voterData || !registrarData) {
+      console.warn("Voter or registrar data not found");
+      return { weight: new BN(0), items: [] };
     }
+
+    return {
+      weight: computeVsrWeight(
+        voterData.deposits,
+        registrarData.votingMints
+      ), 
+      items: [
+        {
+          amount: voterData.deposits.reduce((acc, deposit) => acc.add(deposit.amountDepositedNative), new BN(0)),
+          title: "Tokens Deposited"
+        }
+      ] 
+    };
+  }
+
+  async getDepositInstructions(amount: BN) {
+    const ixs: TransactionInstruction[] = [];
+
+    if (!this.registrarData || !this.registrarKey || !this.voterKey || !this.voterWeightRecordKey || !this.voter) {
+      throw new Error("Registrar or voter key not initialized");
+    }
+
+    const depositMint = this.registrarData.votingMints[0]
+
+    if (!depositMint) {
+      throw new Error("Deposit mint not found in registrar data");
+    }
+
+    const depositMintOwner = (await this.connection.getAccountInfo(depositMint.mint))?.owner;
+    const deposits = this.voterData?.deposits || [];
+
+    if (!depositMintOwner) {
+      throw new Error("Deposit mint owner not found");
+    }
+
+    const vault = getAssociatedTokenAddressSync(
+      depositMint.mint,
+      new PublicKey(this.voterKey),
+      true,
+      depositMintOwner
+    )
+
+    if (!this.voterData) {
+      const createVoterIx = await this.client.methods.createVoter(this.voterBump, this.vwrBump)
+        .accounts({
+          registrar: this.registrarKey,
+          voterAuthority: this.voter,
+          payer: this.voter
+        }).instruction()
+
+      ixs.push(createVoterIx)
+    }
+
+
+    let depositEntryIndex = 0
+
+    let availableDeposit = deposits.findIndex(
+      deposit => deposit.isUsed && deposit.lockup.kind.none &&
+        this.registrarData!.votingMints[deposit.votingMintConfigIdx].mint.equals(depositMint.mint)
+    )
+
+    if (availableDeposit === -1) {
+      availableDeposit = deposits.findIndex(deposit => !deposit.isUsed)
+
+      if (availableDeposit === -1 && deposits.length > 0) {
+        throw new Error("No deposit entry space is available.")
+      }
+
+      availableDeposit = availableDeposit === -1 ? 0 : availableDeposit
+      depositEntryIndex = availableDeposit
+
+      const createDepositEntryIx = await this.client.methods.createDepositEntry(
+        availableDeposit,
+        { none: {} },
+        null,
+        0,
+        false
+      ).accounts({
+        depositMint: depositMint.mint,
+        payer: this.voter,
+        tokenProgram: depositMintOwner,
+        registrar: this.registrarKey,
+        voter: this.voterKey,
+        voterAuthority: this.voter,
+        systemProgram: SYSTEM_PROGRAM_ID,
+        vault: vault,
+        associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID
+      }).instruction()
+
+      ixs.push(createDepositEntryIx)
+    } else {
+      depositEntryIndex = availableDeposit
+    }
+
+    const depositToken = getAssociatedTokenAddressSync(
+      depositMint.mint,
+      new PublicKey(this.voter),
+      true,
+      depositMintOwner
+    )
+
+    const depositIx = await this.client.methods.deposit(
+      depositEntryIndex,
+      amount
+    ).accounts({
+      depositAuthority: this.voter,
+      tokenProgram: depositMintOwner,
+      depositToken,
+      registrar: this.registrarKey,
+      voter: this.voterKey,
+      vault
+    }).instruction()
+
+    ixs.push(depositIx)
+
+    return {
+      useVanilla: false,
+      instructions: ixs
+    };
+  }
+
+  async getWithdrawInstructions(
+    amount: BN,
+    tokenOwnerRecord: string
+  ) {
+    const ixs: TransactionInstruction[] = [];
+    let amountRemaining = amount
+    let currentIndex = 0
+
+    if (
+      !this.registrarData ||
+      !this.registrarKey ||
+      !this.voterKey ||
+      !this.voterWeightRecordKey ||
+      !this.voterData ||
+      !this.voter
+    ) {
+      throw new Error("Registrar or voter key not initialized");
+    }
+
+    const deposits = this.voterData.deposits || [];
+    const depositMint = this.registrarData.votingMints[0]
+
+    if (!depositMint) {
+      throw new Error("Deposit mint not found in registrar data");
+    }
+
+    const depositMintOwner = (await this.connection.getAccountInfo(depositMint.mint))?.owner;
+    
+    const vault = getAssociatedTokenAddressSync(
+      depositMint.mint,
+      new PublicKey(this.voterKey),
+      true,
+      depositMintOwner
+    )
+
+    while (amountRemaining.gt(new BN(0))) {
+      const currentDepositAmt = deposits[currentIndex].amountDepositedNative
+
+      if (
+        deposits[currentIndex].isUsed &&
+        this.registrarData.votingMints[deposits[currentIndex].votingMintConfigIdx].mint.equals(depositMint.mint) &&
+        currentDepositAmt.gt(new BN(0)) &&
+        deposits[currentIndex].lockup.kind.none !== undefined
+      ) {
+        const amtToWithdraw = amount.gt(currentDepositAmt) ? currentDepositAmt : amount
+
+        const destination = getAssociatedTokenAddressSync(
+          depositMint.mint,
+          new PublicKey(this.voter),
+          true,
+          depositMintOwner
+        )
+
+        const withdawIx = await this.client.methods.withdraw(
+          currentIndex,
+          amtToWithdraw
+        ).accounts({
+          registrar: this.registrarKey,
+          voter: this.voterKey,
+          voterAuthority: this.voter,
+          tokenOwnerRecord,
+          voterWeightRecord: this.voterWeightRecordKey,
+          vault,
+          destination
+        })
+        .instruction()
+
+        ixs.push(withdawIx)
+        amountRemaining = amountRemaining.sub(amtToWithdraw)
+      }
+
+      currentIndex++
+    }
+
+    return {
+      useVanilla: false,
+      instructions: ixs
+    }
+  }
+
+  getDepositMessage() {
+    return null
+  }
+
+  getPluginDepositMint() {
+    return this.registrarData?.votingMints[0]?.mint.toBase58() || null;
+  }
+
+  getDepositedTokenAmount() {
+    if (!this.voterData) {
+      return null;
+    }
+
+    return this.voterData.deposits.reduce((acc, deposit) => acc.add(deposit.amountDepositedNative), new BN(0))
+  }
+
+  async getUpdateVoterWeightInstructions() {
+    if (
+      !this.registrarData ||
+      !this.registrarKey ||
+      !this.voterKey ||
+      !this.voterWeightRecordKey ||
+      !this.voter
+    ) {
+      throw new Error("Registrar or voter key not initialized");
+    }
+
+    const updateIx = await this.client.methods.updateVoterWeightRecord()
+      .accounts({
+        registrar: this.registrarKey,
+        voter: this.voterKey,
+        voterWeightRecord: this.voterWeightRecordKey,
+        systemProgram: SYSTEM_PROGRAM_ID
+      }).instruction();
+
+    return {
+      instructions: [updateIx],
+      voterWeightRecordKey: this.voterWeightRecordKey.toBase58(),
+      remainingAccounts: []
+    };
   }
 }

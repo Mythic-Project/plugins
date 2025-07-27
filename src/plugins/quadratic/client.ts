@@ -1,31 +1,35 @@
-import { AnchorProvider, Program, Wallet } from "@coral-xyz/anchor";
-import { VotePlugin } from "../../constants/types";
-import BN from "bn.js";
-import { Quadratic } from "./idl";
-import idl from "./idl.json";
-import { Connection, PublicKey } from "@solana/web3.js";
-import { computeVsrWeight } from "../vsr/utils";
-import { PLUGIN_KEYS } from "../../constants";
-import { SplGovernance } from "governance-idl-sdk";
-import { plugins } from "..";
-import { getCofficientWeight } from "./utils";
-import { getRegistrarKey } from "../../utils";
+import { IdlAccounts, Program } from '@coral-xyz/anchor';
+import { VotePlugin } from '../../constants/types';
+import BN from 'bn.js';
+import { Quadratic } from './idl';
+import idl from './idl.json';
+import { Connection, PublicKey } from '@solana/web3.js';
+import { getCofficientWeight } from './utils';
+import { getNewAnchorProgram, getRegistrarKey, getVoterWeightRecordKey } from '../../utils';
+import { GatewayPlugin } from '../gateway/client';
 
-export const QuadraticPlugin: VotePlugin = {
-  name: "Quadratic Plugin",
+type RegistrarData = IdlAccounts<Quadratic>["registrar"];
+type VoterWeightRecord = IdlAccounts<Quadratic>["voterWeightRecord"];
 
-  getClient(rpcEndpoint: string, programId?: string): Program<Quadratic> {
-    const provider = new AnchorProvider(
-      new Connection(rpcEndpoint, "confirmed"),
-      {} as Wallet,
-      { commitment: "confirmed" }
-    );
+export class QuadraticPlugin implements VotePlugin {
+  private sourcePlugin: VotePlugin | null = null;
+  private registrarKey: PublicKey | null = null;
+  private registrarData: RegistrarData | null = null;
+  private voterWeightRecord: VoterWeightRecord | null = null;
+  private voterWeightRecordKey: PublicKey | null = null;
+  private voter: string | null = null;
+  connection: Connection;
+  client: Program<Quadratic>;
+  showDepositModal: boolean;
 
-    const program = new Program<Quadratic>(idl as Quadratic, provider)
-    return program;
-  },
-
-  async getVoterWeightByVoter(
+  constructor(rpcEndpoint: string) {
+    const { client, connection } = getNewAnchorProgram(rpcEndpoint, idl as Quadratic);
+    this.connection = connection;
+    this.client = client;
+    this.showDepositModal = true;
+  }
+  
+  async initPlugin(
     rpcEndpoint: string,
     programId: string,
     voter: string,
@@ -33,57 +37,153 @@ export const QuadraticPlugin: VotePlugin = {
     mint: string,
     inputWeightProgramId?: string,
     inputInputWeightProgramId?: string
-  ): Promise<BN> {
-
-    const registrarKey = getRegistrarKey(programId, realm, mint);
-    const client: Program<Quadratic> = this.getClient(rpcEndpoint, programId)
-    const registrar = await client.account.registrar.fetchNullable(registrarKey);
-
-    if (!registrar) {
-      console.warn("Registrar not found");
-      return new BN(0);
-    }
-    
-    const a = registrar.quadraticCoefficients.a;
-    const b = registrar.quadraticCoefficients.b;
-    const c = registrar.quadraticCoefficients.c;
-
-    if (!inputWeightProgramId) {
-      throw new Error("Input weight program ID is required for Quadractic plugin");
-    }
-
-    const inputPluginIndex = PLUGIN_KEYS.findIndex((plugin) => plugin.includes(inputWeightProgramId))
-
-    if (inputPluginIndex === -1) {
-      const splGovernance = new SplGovernance(
-        new Connection(rpcEndpoint, "confirmed"),
-        new PublicKey(inputWeightProgramId)
-      )
-
-      try {
-        const tor = await splGovernance.getTokenOwnerRecord(
-          new PublicKey(realm),
-          new PublicKey(voter),
-          new PublicKey(mint)
-        )
-
-        return getCofficientWeight(tor.governingTokenDepositAmount, a, b, c)
-      } catch (error) {
-        console.error("Error fetching TokenOwnerRecord:", error)
-        return new BN(0)
-      }
-    } else {
-      const sourcePlugin = plugins[inputPluginIndex]
-      const weight = await sourcePlugin.getVoterWeightByVoter(
-        rpcEndpoint,
-        inputWeightProgramId,
-        voter,
-        realm,
-        mint,
-        inputInputWeightProgramId
-      )
-
-      return getCofficientWeight(weight, a, b, c)
-    }
+  ): Promise<VotePlugin> {
+    return await QuadraticPlugin.init(
+      rpcEndpoint,
+      programId,
+      voter,
+      realm,
+      mint,
+      inputWeightProgramId,
+      inputInputWeightProgramId
+    );
   }
-}
+
+  static async init(
+    rpcEndpoint: string,
+    programId: string,
+    voter: string,
+    realm: string,
+    mint: string,
+    inputWeightProgramId?: string,
+    inputInputWeightProgramId?: string
+  ) {
+    if (!inputWeightProgramId) {
+      throw new Error('Input weight program ID is required for Quadratic plugin');
+    }
+
+    const instance = new QuadraticPlugin(rpcEndpoint);
+    const registrarKey = getRegistrarKey(programId, realm, mint);
+    const [voterWeightRecordKey] = getVoterWeightRecordKey(programId, registrarKey.toBase58(), voter);
+    const registrarData = await instance.client.account.registrar.fetchNullable(registrarKey);
+    const voterWeightRecord = await instance.client.account.voterWeightRecord.fetchNullable(voterWeightRecordKey);
+
+    const sourcePlugin = await GatewayPlugin.init(
+      rpcEndpoint,
+      inputWeightProgramId,
+      voter,
+      realm,
+      mint,
+      inputInputWeightProgramId
+    )
+
+    instance.sourcePlugin = sourcePlugin;
+    instance.registrarData = registrarData;
+    instance.registrarKey = registrarKey;
+    instance.voterWeightRecord = voterWeightRecord;
+    instance.voterWeightRecordKey = voterWeightRecordKey;
+    instance.voter = voter;
+
+    return instance;
+  }
+
+  async getVoterWeight() {
+    if (!this.registrarData) {
+      console.warn('Registrar data not found');
+      return { weight: new BN(0), items: [] };
+    }
+
+    const a = this.registrarData.quadraticCoefficients.a;
+    const b = this.registrarData.quadraticCoefficients.b;
+    const c = this.registrarData.quadraticCoefficients.c;
+
+    const voteWeight = (await this.sourcePlugin?.getVoterWeight())?.weight || new BN(0); 
+    const weight = getCofficientWeight(voteWeight, a, b, c);
+    return {
+      weight,
+      items: [
+        {
+          amount: voteWeight,
+          title: "Deposited"
+        }
+      ]
+    };
+  }
+
+  getDepositMessage() {
+    return null;
+  }
+
+  async getDepositInstructions() {
+    if (!this.registrarData || !this.voter || !this.voterWeightRecordKey || !this.registrarKey) {
+      console.warn('Registrar data not found');
+      return {
+        instructions: [],
+        useVanilla: true
+      };
+    }
+
+    if (!this.voterWeightRecord) {
+      const createVoterWeightRecordIx = await this.client.methods
+        .createVoterWeightRecord(new PublicKey(this.voter))
+        .accountsPartial({
+          registrar: this.registrarKey,
+          voterWeightRecord: this.voterWeightRecordKey,
+          payer: this.voter
+        })
+        .instruction();
+
+      return {
+        instructions: [createVoterWeightRecordIx],
+        useVanilla: true
+      };
+    }
+
+    return {
+      instructions: [],
+      useVanilla: true
+    };
+  }
+
+  async getWithdrawInstructions() {
+    return {
+      instructions: [],
+      useVanilla: true
+    };
+  }
+
+  getPluginDepositMint() {
+    return null
+  }
+
+  getDepositedTokenAmount() {
+    return null
+  }
+
+  async getUpdateVoterWeightInstructions(
+    tokenOwnerRecord?: string,
+  ) {
+    if (
+      !this.registrarData ||
+      !this.registrarKey ||
+      !this.voterWeightRecordKey ||
+      !this.voter ||
+      !tokenOwnerRecord
+    ) {
+      throw new Error("Registrar or voter key not initialized");
+    }
+
+    const updateIx = await this.client.methods.updateVoterWeightRecord()
+      .accountsPartial({
+        registrar: this.registrarKey,
+        voterWeightRecord: this.voterWeightRecordKey,
+        inputVoterWeight: tokenOwnerRecord
+      }).instruction();
+
+    return {
+      instructions: [updateIx],
+      voterWeightRecordKey: this.voterWeightRecordKey.toBase58(),
+      remainingAccounts: []
+    };
+  }
+};

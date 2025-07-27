@@ -17,9 +17,9 @@ const PYTH_PLUGINS = [
   "pytS9TjG1qyAZypk7n8rw8gfW9sUaqqYyMhJQ4E7JCQ",
 ]
 
-const JP_LOCK_PLUGINS = [
-  "JPLockxtkngHkaQT5AuRYow3HyUv5qWzmhwsCPd653n",
-]
+// const JP_LOCK_PLUGINS = [
+//   "JPLockxtkngHkaQT5AuRYow3HyUv5qWzmhwsCPd653n",
+// ]
 
 const NFT_VOTER_PLUGINS = [
   "GnftV5kLjd67tvHpNGyodwWveEKivz3ZWvvE3Z4xi2iw",
@@ -49,9 +49,9 @@ const BONK_PLUGINS = [
   "EoKpGErCsD4UEbbY6LX4MLWBUjmoAxqKdU4fdtLuzK6M",
 ]
 
-const PARCL_PLUGINS = [
-  "2gWf5xLAzZaKX9tQj9vuXsaxTWtzTZDFRn21J3zjNVgu"
-]
+// const PARCL_PLUGINS = [
+//   "2gWf5xLAzZaKX9tQj9vuXsaxTWtzTZDFRn21J3zjNVgu"
+// ]
 
 export const PLUGIN_KEYS = [
   VSR_PLUGINS,
@@ -64,5 +64,5 @@ export const PLUGIN_KEYS = [
   QUADRATIC_PLUGINS,
   GATEWAY_PLUGINS,
   TOKEN_HAVER_PLUGINS,
-  PARCL_PLUGINS
+  // PARCL_PLUGINS
 ]
