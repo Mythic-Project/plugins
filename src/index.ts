@@ -28,3 +28,5 @@ export const plugins: VotePlugin[] = [
   new TokenHaverPlugin(defaultConnection),
   // ParclPlugin
 ]
+
+export { PLUGIN_KEYS } from "./constants";
